@@ -141,7 +141,7 @@
     width: min(38vh, 340px);
     height: min(64vh, 580px);
   }
-  video#lia-video {
+  img#lia-media {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -154,7 +154,7 @@
     filter: brightness(0.95) contrast(1.05);
     box-shadow: 0 0 40px rgba(77,226,255,0.25), inset 0 0 60px rgba(5,13,20,0.6);
   }
-  video#lia-video.ready { opacity: 1; }
+  img#lia-media.ready { opacity: 1; }
   canvas#face {
     position: absolute;
     inset: 0;
@@ -355,9 +355,7 @@
 
     <main class="core">
       <div class="orb-wrap">
-        <video id="lia-video" autoplay loop muted playsinline preload="auto">
-          <source src="idle.mp4" type="video/mp4">
-        </video>
+        <img id="lia-media" src="idle.gif" alt="">
         <canvas id="face"></canvas>
       </div>
       <div class="status-line idle" id="status">EM ESPERA</div>
@@ -392,17 +390,20 @@
 (function(){
   'use strict';
 
-  // ---------- Video da Lia (idle.mp4 etc.) ----------
-  const liaVideo = document.getElementById('lia-video');
+  // ---------- Mídia da Lia (idle.gif etc.) ----------
+  const liaMedia = document.getElementById('lia-media');
   let videoReady = false;
-  if(liaVideo){
-    liaVideo.addEventListener('loadeddata', ()=>{
+  if(liaMedia){
+    if(liaMedia.complete && liaMedia.naturalWidth > 0){
       videoReady = true;
-      liaVideo.classList.add('ready');
-    });
-    liaVideo.play().catch(()=>{
-      document.addEventListener('click', ()=>liaVideo.play().catch(()=>{}), {once:true});
-    });
+      liaMedia.classList.add('ready');
+    } else {
+      liaMedia.addEventListener('load', ()=>{
+        videoReady = true;
+        liaMedia.classList.add('ready');
+      });
+      liaMedia.addEventListener('error', ()=>{ videoReady = false; });
+    }
   }
 
   // ---------- Canvas: holographic face / orb ----------
