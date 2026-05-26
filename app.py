@@ -66,18 +66,11 @@ def voices():
         data = r.json()
         all_voices = data.get("voices", [])
 
-        def is_brazilian(v):
-            labels = v.get("labels", {}) or {}
-            accent = (labels.get("accent") or "").lower()
-            language = (labels.get("language") or "").lower()
-            desc = (labels.get("description") or "").lower()
-            return (
-                "brazil" in accent
-                or "brazilian" in desc
-                or language in ("pt", "pt-br", "pt_br")
-            )
+        def is_user_added(v):
+            """Vozes adicionadas pelo usuário ao 'My Voices' (não as padrão premade)."""
+            return (v.get("category") or "").lower() != "premade"
 
-        filtered = all_voices if show_all else [v for v in all_voices if is_brazilian(v)]
+        filtered = all_voices if show_all else [v for v in all_voices if is_user_added(v)]
 
         slim = [
             {
