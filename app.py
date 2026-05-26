@@ -27,11 +27,11 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 # ----- Configuração -----
 # Chaves vêm do AMBIENTE, nunca escritas aqui.
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
 ELEVEN_BASE = "https://api.elevenlabs.io/v1"
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 # Modelo multilíngue (suporta português). Flash é mais rápido/barato.
 DEFAULT_MODEL = "eleven_multilingual_v2"
 
@@ -165,8 +165,8 @@ def chat():
     a saída do GPT. O backend injeta o conteúdo de about_me.md no system
     prompt, então a Lia sempre tem o contexto pessoal do usuário.
     """
-    if not GEMINI_API_KEY:
-        return jsonify({"error": "GEMINI_API_KEY não configurada no servidor."}), 500
+    if not GROQ_API_KEY:
+        return jsonify({"error": "GROQ_API_KEY não configurada no servidor."}), 500
 
     body = request.get_json(silent=True) or {}
     messages = body.get("messages") or []
@@ -179,38 +179,27 @@ def chat():
     system_parts = [p for p in [base_system, "## Contexto pessoal sobre o usuário\n" + about if about else ""] if p]
     system_prompt = "\n\n".join(system_parts)
 
-    # Converte formato OpenAI/Anthropic -> Gemini (role 'assistant' vira 'model')
-    contents = [
-        {
-            "role": "model" if m.get("role") == "assistant" else "user",
-            "parts": [{"text": m.get("content", "")}],
-        }
-        for m in messages
-    ]
-
-    payload = {
-        "contents": contents,
-        "generationConfig": {"maxOutputTokens": 1024},
-    }
-    if system_prompt:
-        payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+    full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
 
     try:
         r = requests.post(
-            GEMINI_URL,
-            headers={"Content-Type": "application/json"},
-            params={"key": GEMINI_API_KEY},
-            json=payload,
+            GROQ_URL,
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": GROQ_MODEL,
+                "messages": full_messages,
+                "max_tokens": 1024,
+            },
             timeout=60,
         )
         if r.status_code != 200:
-            return jsonify({"error": f"Gemini {r.status_code}: {r.text[:1500]}"}), 502
+            return jsonify({"error": f"Groq {r.status_code}: {r.text[:800]}"}), 502
         data = r.json()
-        text = "".join(
-            p.get("text", "")
-            for p in (data.get("candidates", [{}])[0].get("content", {}).get("parts", []) or [])
-        ).strip()
-        return jsonify({"reply": text, "model": GEMINI_MODEL})
+        text = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
+        return jsonify({"reply": text, "model": data.get("model")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
