@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m venv .venv)",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(.venv/bin/python -c \"import flask, requests; print\\('ok', flask.__version__, requests.__version__\\)\")"
+    ]
+  }
+}
