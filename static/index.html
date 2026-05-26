@@ -698,9 +698,10 @@ Always respond in Brazilian Portuguese (português do Brasil), in a natural, con
         sel.appendChild(o);
       });
       if(elevenVoices.length){
-        // prefer a female voice by label if present
+        // Preferência: Agelina (voz clonada) > qualquer feminina > primeira
+        const angelina = elevenVoices.find(v => /a[gn]elina/i.test(v.name||''));
         const fem = elevenVoices.find(v=>v.labels && /female/i.test(v.labels.gender||''));
-        chosenVoiceId = (fem || elevenVoices[0]).voice_id;
+        chosenVoiceId = (angelina || fem || elevenVoices[0]).voice_id;
         sel.value = chosenVoiceId;
       }
     } catch(e){
