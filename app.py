@@ -18,18 +18,31 @@ funciona junto sem configuração extra de CORS.
 """
 
 import os
+from pathlib import Path
 import requests
 from flask import Flask, request, jsonify, Response, send_from_directory
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 
 # ----- Configuração -----
-# A chave vem do AMBIENTE, nunca escrita aqui. Veja instruções no topo.
+# Chaves vêm do AMBIENTE, nunca escritas aqui.
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 ELEVEN_BASE = "https://api.elevenlabs.io/v1"
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 # Modelo multilíngue (suporta português). Flash é mais rápido/barato.
 DEFAULT_MODEL = "eleven_multilingual_v2"
+
+ABOUT_ME_PATH = Path(__file__).parent / "about_me.md"
+
+
+def load_about_me() -> str:
+    try:
+        return ABOUT_ME_PATH.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
 
 
 @app.route("/")
@@ -141,6 +154,54 @@ def tts():
                     yield chunk
 
         return Response(generate(), mimetype="audio/mpeg")
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """
+    Recebe { messages: [{role, content}], system?: string } e responde com
+    a saída do Claude. O backend injeta o conteúdo de about_me.md no system
+    prompt, então a Lia sempre tem o contexto pessoal do usuário.
+    """
+    if not ANTHROPIC_API_KEY:
+        return jsonify({"error": "ANTHROPIC_API_KEY não configurada no servidor."}), 500
+
+    body = request.get_json(silent=True) or {}
+    messages = body.get("messages") or []
+    base_system = (body.get("system") or "").strip()
+
+    if not isinstance(messages, list) or not messages:
+        return jsonify({"error": "messages vazio ou inválido."}), 400
+
+    about = load_about_me()
+    system_parts = [p for p in [base_system, "## Contexto pessoal sobre o usuário\n" + about if about else ""] if p]
+    system_prompt = "\n\n".join(system_parts)
+
+    try:
+        r = requests.post(
+            ANTHROPIC_URL,
+            headers={
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": ANTHROPIC_MODEL,
+                "max_tokens": 1024,
+                "system": system_prompt,
+                "messages": messages,
+            },
+            timeout=60,
+        )
+        if r.status_code != 200:
+            return jsonify({"error": f"Anthropic {r.status_code}: {r.text[:300]}"}), 502
+        data = r.json()
+        text = "\n".join(
+            b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"
+        ).strip()
+        return jsonify({"reply": text, "model": data.get("model")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
