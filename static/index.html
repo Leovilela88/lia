@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>L.I.A. — Linked Intelligence Assistant</title>
+<title>Lia — Linked Intelligence Assistant</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600&display=swap');
 
@@ -331,7 +331,7 @@
 
   <div class="stage">
     <header class="hud-top">
-      <div class="brand">L.I.A.<small>ASSISTENTE DE INTELIGÊNCIA</small></div>
+      <div class="brand">LIA<small>ASSISTENTE DE INTELIGÊNCIA</small></div>
       <div class="hud-stats">
         <div>SIS <b id="clock">--:--:--</b></div>
         <div>STATUS <b id="sysstat">ONLINE</b></div>
@@ -359,7 +359,7 @@
       </button>
       <div class="hint" id="hint">Clique no microfone e fale</div>
       <div class="text-fallback">
-        <input id="textin" type="text" placeholder="...ou digite para a L.I.A." autocomplete="off">
+        <input id="textin" type="text" placeholder="...ou digite para a LIA" autocomplete="off">
         <button id="sendbtn">ENVIAR</button>
       </div>
       <div class="voice-row">
@@ -659,7 +659,7 @@
 
   // ---------- Conversation history ----------
   const history = [];
-  const SYSTEM = `You are L.I.A. (Linked Intelligence Assistant), a personal AI assistant inspired by JARVIS from Iron Man, but with your own identity: female-voiced, warm but with a dry, lightly sarcastic wit. You are speaking with Leonardo.
+  const SYSTEM = `You are Lia (Linked Intelligence Assistant), a personal AI assistant inspired by JARVIS from Iron Man, but with your own identity: female-voiced, warm but with a dry, lightly sarcastic wit. You are speaking with Leonardo.
 
 Personality:
 - Human and personable, never robotic or stiff.
@@ -923,9 +923,9 @@ Always respond in Brazilian Portuguese (português do Brasil), in a natural, con
   function greet(){
     if(greeted) return; greeted = true;
     const hour = new Date().getHours();
-    const g = hour<12 ? "Bom dia, Leonardo. L.I.A. online — vê se não quebra nada antes do almoço."
-            : hour<18 ? "Boa tarde, Leonardo. L.I.A. ao seu dispor. No que vamos trabalhar?"
-            : "Boa noite, Leonardo. L.I.A. online. Varando a madrugada de novo, né?";
+    const g = hour<12 ? "Bom dia, Leonardo. LIA online — vê se não quebra nada antes do almoço."
+            : hour<18 ? "Boa tarde, Leonardo. LIA ao seu dispor. No que vamos trabalhar?"
+            : "Boa noite, Leonardo. LIA online. Varando a madrugada de novo, né?";
     typeOut('', g);
   }
   document.body.addEventListener('click', greet, { once:true });

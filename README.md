@@ -1,4 +1,4 @@
-# L.I.A. — Assistente de voz com ElevenLabs
+# LIA — Assistente de voz com ElevenLabs
 
 Versão da Lia com voz natural via ElevenLabs. A chave de API fica **no servidor**,
 nunca no navegador — então é seguro hospedar/compartilhar.

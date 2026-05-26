@@ -1,5 +1,5 @@
 """
-L.I.A. — Backend de voz (ElevenLabs proxy)
+LIA — Backend de voz (ElevenLabs proxy)
 -------------------------------------------
 Este servidor guarda a chave do ElevenLabs em uma variável de ambiente
 (NUNCA no código) e faz a ponte entre o front-end da Lia e a API de voz.
