@@ -204,7 +204,7 @@ def chat():
             timeout=60,
         )
         if r.status_code != 200:
-            return jsonify({"error": f"Gemini {r.status_code}: {r.text[:300]}"}), 502
+            return jsonify({"error": f"Gemini {r.status_code}: {r.text[:1500]}"}), 502
         data = r.json()
         text = "".join(
             p.get("text", "")
