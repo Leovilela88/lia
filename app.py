@@ -27,11 +27,11 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 # ----- Configuração -----
 # Chaves vêm do AMBIENTE, nunca escritas aqui.
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 ELEVEN_BASE = "https://api.elevenlabs.io/v1"
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5")
 # Modelo multilíngue (suporta português). Flash é mais rápido/barato.
 DEFAULT_MODEL = "eleven_multilingual_v2"
 
@@ -162,11 +162,11 @@ def tts():
 def chat():
     """
     Recebe { messages: [{role, content}], system?: string } e responde com
-    a saída do Claude. O backend injeta o conteúdo de about_me.md no system
+    a saída do GPT. O backend injeta o conteúdo de about_me.md no system
     prompt, então a Lia sempre tem o contexto pessoal do usuário.
     """
-    if not ANTHROPIC_API_KEY:
-        return jsonify({"error": "ANTHROPIC_API_KEY não configurada no servidor."}), 500
+    if not OPENAI_API_KEY:
+        return jsonify({"error": "OPENAI_API_KEY não configurada no servidor."}), 500
 
     body = request.get_json(silent=True) or {}
     messages = body.get("messages") or []
@@ -179,28 +179,25 @@ def chat():
     system_parts = [p for p in [base_system, "## Contexto pessoal sobre o usuário\n" + about if about else ""] if p]
     system_prompt = "\n\n".join(system_parts)
 
+    full_messages = ([{"role": "system", "content": system_prompt}] if system_prompt else []) + messages
+
     try:
         r = requests.post(
-            ANTHROPIC_URL,
+            OPENAI_URL,
             headers={
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
+                "Authorization": f"Bearer {OPENAI_API_KEY}",
                 "Content-Type": "application/json",
             },
             json={
-                "model": ANTHROPIC_MODEL,
-                "max_tokens": 1024,
-                "system": system_prompt,
-                "messages": messages,
+                "model": OPENAI_MODEL,
+                "messages": full_messages,
             },
             timeout=60,
         )
         if r.status_code != 200:
-            return jsonify({"error": f"Anthropic {r.status_code}: {r.text[:300]}"}), 502
+            return jsonify({"error": f"OpenAI {r.status_code}: {r.text[:300]}"}), 502
         data = r.json()
-        text = "\n".join(
-            b.get("text", "") for b in data.get("content", []) if b.get("type") == "text"
-        ).strip()
+        text = (data.get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
         return jsonify({"reply": text, "model": data.get("model")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
