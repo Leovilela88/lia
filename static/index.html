@@ -138,23 +138,27 @@
 
   .orb-wrap {
     position: relative;
-    width: min(38vh, 340px);
-    height: min(64vh, 580px);
+    width: min(72vw, 720px);
+    aspect-ratio: 16 / 9;
   }
-  img#lia-media {
+  .lia-media {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 28px;
+    border-radius: 20px;
     z-index: 0;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.35s ease;
     filter: brightness(0.95) contrast(1.05);
-    box-shadow: 0 0 40px rgba(77,226,255,0.25), inset 0 0 60px rgba(5,13,20,0.6);
   }
-  img#lia-media.ready { opacity: 1; }
+  .lia-media.show { opacity: 1; }
+  .orb-wrap {
+    box-shadow: 0 0 40px rgba(77,226,255,0.25), inset 0 0 60px rgba(5,13,20,0.6);
+    border-radius: 20px;
+    overflow: hidden;
+  }
   canvas#face {
     position: absolute;
     inset: 0;
@@ -355,7 +359,8 @@
 
     <main class="core">
       <div class="orb-wrap">
-        <img id="lia-media" src="idle.gif" alt="">
+        <img class="lia-media" id="lia-idle" src="idle.gif" alt="">
+        <img class="lia-media" id="lia-talking" src="talking.gif" alt="">
         <canvas id="face"></canvas>
       </div>
       <div class="status-line idle" id="status">EM ESPERA</div>
@@ -390,21 +395,34 @@
 (function(){
   'use strict';
 
-  // ---------- Mídia da Lia (idle.gif etc.) ----------
-  const liaMedia = document.getElementById('lia-media');
+  // ---------- Mídia da Lia (idle.gif / talking.gif) ----------
+  const liaIdle = document.getElementById('lia-idle');
+  const liaTalking = document.getElementById('lia-talking');
   let videoReady = false;
-  if(liaMedia){
-    if(liaMedia.complete && liaMedia.naturalWidth > 0){
+
+  function markReady(img){
+    if(img.complete && img.naturalWidth > 0 && !img.dataset.ready){
+      img.dataset.ready = '1';
       videoReady = true;
-      liaMedia.classList.add('ready');
-    } else {
-      liaMedia.addEventListener('load', ()=>{
-        videoReady = true;
-        liaMedia.classList.add('ready');
-      });
-      liaMedia.addEventListener('error', ()=>{ videoReady = false; });
     }
   }
+  [liaIdle, liaTalking].filter(Boolean).forEach(img=>{
+    markReady(img);
+    img.addEventListener('load', ()=>markReady(img));
+  });
+
+  function updateMedia(){
+    if(!videoReady) return;
+    if(speaking){
+      liaTalking && liaTalking.classList.add('show');
+      liaIdle && liaIdle.classList.remove('show');
+    } else {
+      liaIdle && liaIdle.classList.add('show');
+      liaTalking && liaTalking.classList.remove('show');
+    }
+  }
+  // initial state
+  setTimeout(updateMedia, 100);
 
   // ---------- Canvas: holographic face / orb ----------
   const canvas = document.getElementById('face');
@@ -733,9 +751,9 @@ Always respond in Brazilian Portuguese (português do Brasil), in a natural, con
         const srcNode = audioCtx.createMediaElementSource(audio);
         srcNode.connect(analyser);
 
-        audio.onplay = ()=>{ speaking = true; setStatus('FALANDO'); trackAmplitude(); };
-        audio.onended = ()=>{ speaking = false; targetAmp = 0; setStatus('EM ESPERA', true); URL.revokeObjectURL(url); };
-        audio.onerror = ()=>{ speaking = false; targetAmp = 0; setStatus('EM ESPERA', true); };
+        audio.onplay = ()=>{ speaking = true; setStatus('FALANDO'); trackAmplitude(); updateMedia(); };
+        audio.onended = ()=>{ speaking = false; targetAmp = 0; setStatus('EM ESPERA', true); URL.revokeObjectURL(url); updateMedia(); };
+        audio.onerror = ()=>{ speaking = false; targetAmp = 0; setStatus('EM ESPERA', true); updateMedia(); };
         await audio.play();
         return;
       } catch(e){
@@ -753,8 +771,8 @@ Always respond in Brazilian Portuguese (português do Brasil), in a natural, con
     const pt = (browserSynth.getVoices()||[]).filter(v=>v.lang.toLowerCase().startsWith('pt'));
     if(pt[0]){ u.voice = pt[0]; u.lang = pt[0].lang; }
     u.rate = 0.95; u.pitch = 1.1;
-    u.onstart = ()=>{ speaking = true; setStatus('FALANDO'); fakeAmp(); };
-    u.onend = ()=>{ speaking = false; targetAmp = 0; setStatus('EM ESPERA', true); };
+    u.onstart = ()=>{ speaking = true; setStatus('FALANDO'); fakeAmp(); updateMedia(); };
+    u.onend = ()=>{ speaking = false; targetAmp = 0; setStatus('EM ESPERA', true); updateMedia(); };
     browserSynth.speak(u);
   }
 
