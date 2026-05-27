@@ -359,7 +359,7 @@
 
     <main class="core">
       <div class="orb-wrap">
-        <video class="lia-media" id="lia-idle" autoplay loop muted playsinline preload="auto">
+        <video class="lia-media" id="lia-idle" autoplay muted playsinline preload="auto">
           <source src="idle.mp4" type="video/mp4">
         </video>
         <video class="lia-media" id="lia-talking" autoplay loop muted playsinline preload="auto">
@@ -414,6 +414,34 @@
     v.addEventListener('loadeddata', ()=>{ videoReady = true; updateMedia(); });
     tryPlay(v);
   });
+
+  // Ping-pong loop para o idle: avança até o fim e volta, sem corte
+  if(liaIdle){
+    let dir = 1;          // 1 = forward, -1 = backward
+    let lastTs = performance.now();
+    function pingPong(now){
+      const dt = (now - lastTs) / 1000;
+      lastTs = now;
+      const dur = liaIdle.duration;
+      if(dur && !isNaN(dur)){
+        let t = liaIdle.currentTime + dir * dt;
+        if(t >= dur){ t = dur; dir = -1; }
+        if(t <= 0){ t = 0; dir = 1; }
+        // Quando vai pra frente, deixa o video tocar normal
+        if(dir === 1){
+          if(liaIdle.paused) liaIdle.play().catch(()=>{});
+        } else {
+          // Indo pra trás: pausa o playback nativo e move o currentTime
+          if(!liaIdle.paused) liaIdle.pause();
+          liaIdle.currentTime = t;
+        }
+      }
+      requestAnimationFrame(pingPong);
+    }
+    liaIdle.addEventListener('loadedmetadata', ()=>{
+      requestAnimationFrame(pingPong);
+    });
+  }
 
   function updateMedia(){
     if(!videoReady) return;
