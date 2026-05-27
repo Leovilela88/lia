@@ -359,8 +359,12 @@
 
     <main class="core">
       <div class="orb-wrap">
-        <img class="lia-media" id="lia-idle" src="idle.gif" alt="">
-        <img class="lia-media" id="lia-talking" src="talking.gif" alt="">
+        <video class="lia-media" id="lia-idle" autoplay loop muted playsinline preload="auto">
+          <source src="idle.mp4" type="video/mp4">
+        </video>
+        <video class="lia-media" id="lia-talking" autoplay loop muted playsinline preload="auto">
+          <source src="talking.mp4" type="video/mp4">
+        </video>
         <canvas id="face"></canvas>
       </div>
       <div class="status-line idle" id="status">EM ESPERA</div>
@@ -395,20 +399,20 @@
 (function(){
   'use strict';
 
-  // ---------- Mídia da Lia (idle.gif / talking.gif) ----------
+  // ---------- Mídia da Lia (idle.mp4 / talking.mp4) ----------
   const liaIdle = document.getElementById('lia-idle');
   const liaTalking = document.getElementById('lia-talking');
   let videoReady = false;
 
-  function markReady(img){
-    if(img.complete && img.naturalWidth > 0 && !img.dataset.ready){
-      img.dataset.ready = '1';
-      videoReady = true;
-    }
+  function tryPlay(v){
+    if(!v) return;
+    v.play().catch(()=>{
+      document.addEventListener('click', ()=>v.play().catch(()=>{}), {once:true});
+    });
   }
-  [liaIdle, liaTalking].filter(Boolean).forEach(img=>{
-    markReady(img);
-    img.addEventListener('load', ()=>markReady(img));
+  [liaIdle, liaTalking].filter(Boolean).forEach(v=>{
+    v.addEventListener('loadeddata', ()=>{ videoReady = true; updateMedia(); });
+    tryPlay(v);
   });
 
   function updateMedia(){
@@ -421,7 +425,6 @@
       liaTalking && liaTalking.classList.remove('show');
     }
   }
-  // initial state
   setTimeout(updateMedia, 100);
 
   // ---------- Canvas: holographic face / orb ----------
